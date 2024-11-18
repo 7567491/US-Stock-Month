@@ -5,10 +5,52 @@ from datetime import datetime
 from module.db_manager import DBManager
 
 def load_nasdaq_data(start_date, end_date):
-    """下载纳斯达克100指数数据"""
+    """下载纳斯达克100指数数据和QQQ ETF市盈率"""
     try:
+        # 下载纳斯达克100指数数据
         ndx = yf.Ticker("^NDX")
         df = ndx.history(start=start_date, end=end_date)
+        
+        # 下载QQQ ETF的市盈率数据
+        qqq = yf.Ticker("QQQ")
+        pe_data = qqq.info.get('forwardPE', None)
+        if pe_data:
+            # 为所有日期添加相同的PE值
+            df['pe_ratio'] = float(pe_data)
+            st.info(f"当前QQQ ETF的市盈率: {pe_data:.2f}")
+        else:
+            df['pe_ratio'] = None
+            st.warning("无法获取QQQ ETF的市盈率数据")
+            
+        # 添加QQQ的历史市盈率范围信息
+        historical_pe_ranges = {
+            "最低": 15,    # 历史最低约15倍
+            "偏低": 20,    # 偏低区间
+            "中位": 25,    # 历史中位数约25倍
+            "偏高": 30,    # 偏高区间
+            "最高": 35     # 历史最高约35倍
+        }
+        
+        # 计算当前市盈率的位置
+        if pe_data:
+            if pe_data <= historical_pe_ranges["最低"]:
+                pe_status = "极低"
+            elif pe_data <= historical_pe_ranges["偏低"]:
+                pe_status = "偏低"
+            elif pe_data <= historical_pe_ranges["中位"]:
+                pe_status = "适中"
+            elif pe_data <= historical_pe_ranges["偏高"]:
+                pe_status = "偏高"
+            else:
+                pe_status = "极高"
+                
+            st.info(f"""
+            📊 QQQ ETF市盈率估值分析：
+            - 当前市盈率: {pe_data:.2f}
+            - 估值水平: {pe_status}
+            - 历史区间: {historical_pe_ranges['最低']} - {historical_pe_ranges['最高']}
+            """)
+            
         return df
     except Exception as e:
         st.error(f"下载数据时出错: {str(e)}")

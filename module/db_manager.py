@@ -26,7 +26,8 @@ class DBManager:
                 close REAL,
                 volume REAL,
                 dividends REAL,
-                stock_splits REAL
+                stock_splits REAL,
+                pe_ratio REAL
             )
         ''')
         conn.commit()
